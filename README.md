@@ -9,3 +9,13 @@ Install with pip:
 ```
 $ pip install -r requirements.txt
 ```
+
+### Run with Docker
+
+```
+$ docker build -t flask_app .
+
+$ docker run -p 8080:8080 --name flask_app 
+ 
+```
+

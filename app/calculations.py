@@ -1,3 +1,4 @@
+
 # Takes a nparray of lap features
 def calculate_avg_time(laps):
     lap_times = laps[:, 2]

@@ -3,19 +3,15 @@ import json
 #import matplotlib.pyplot as plt
 from sklearn.cluster import KMeans
 from collections import Counter
-from calculations import calculate_avg_time
+import math
 
-
-#Main funciton used for testing
-def main():
-    # analisys()
-    plt.show()
-
+import matplotlib.pyplot as plt
 
 def edit_distance_features(features, predicted_distances):
     for i, distance in enumerate(features[:, 0]):
         d = min(predicted_distances, key=lambda x: abs(x - distance))
         features[i, 0] = d
+
     return features
 
 
@@ -23,7 +19,28 @@ def predict_distances(features):
     true_distance = [50, 60, 80, 100, 150, 200, 250, 300, 350, 400, 500, 600, 800, 1000, 1200, 1400, 1600, 1609, 2000,
                      2500, 3000]
 
-    kmeans = KMeans(n_clusters=3).fit(features[:, 0].reshape(-1, 1))
+    # Runs k-means 10 times to find the optimal number of clusters
+    K = range(1,10)
+    dist = []
+    for i in K:
+        kmeans = KMeans(n_clusters=i).fit(features[:, 0].reshape(-1, 1))
+        dist.append(kmeans.inertia_)
+
+    a = dist[0] - dist[8]
+    b = K[8] - K[0]
+    c1 = K[0] * dist[8]
+    c2 = K[8] * dist[0]
+    c = c1 - c2
+
+    # Calulates the distance from the line connecting the furthest poins and all points equating to cluster centers
+    dist_from_line = []
+    for i in range(9):
+        dist_from_line.append(calc_distance(K[i], dist[i], a, b, c))
+
+    # Finds the point with the furthest distance, that should be our cluster center
+    num_clusters = np.argmax(dist_from_line) + 1
+
+    kmeans = KMeans(n_clusters=num_clusters).fit(features[:, 0].reshape(-1, 1))
 
     num_distances = len(set(kmeans.labels_))
     distance_sum = np.zeros(shape=num_distances)
@@ -50,7 +67,6 @@ def setup_data(data):
     cadence = []
     speed = []
     timestamp = []
-    #print("Data: ", data)
     for lap in data:
         # Removes the laps that dont have enough speed
         if lap["average_speed"] < 3:
@@ -70,31 +86,17 @@ def setup_data(data):
 
     features = np.concatenate((npdistance, npcadence, npspeed), axis=1)
 
+
+    #np.save('test_data/test_features.npy', features)
+
     return features, timestamp, distance
+
+
+def calc_distance(x1, y1, a, b, c):
+  d = abs((a * x1 + b * y1 + c)) / (math.sqrt(a * a + b * b))
+  return d
 
 
 def normalize_array(array):
     norm = np.linalg.norm(array)
     return array / norm
-
-#Analysis used for testing
-def analisys():
-    with open('strava_laps_2.json') as json_file:
-        r = json.load(json_file)
-
-    features = setup_data(r)
-    predicted_distances = predict_distances(features)
-    new_features = edit_distance_features(features, predicted_distances)
-
-    for i in range(5):
-        j = new_features.shape[0] - 1
-        new_features = np.delete(new_features, j, axis=0)
-
-    plt.scatter(new_features[:, 1], new_features[:, 2])
-
-    print(new_features)
-    return calculate_avg_time(new_features)
-
-
-if __name__ == "__main__":
-    main()
